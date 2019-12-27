@@ -2,7 +2,6 @@ package com.iknow.android.widget;
 
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Handler;
@@ -21,13 +20,15 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.VideoView;
+
 import com.iknow.android.R;
 import com.iknow.android.features.trim.VideoTrimmerAdapter;
 import com.iknow.android.interfaces.IVideoTrimmerView;
 import com.iknow.android.interfaces.VideoTrimListener;
 import com.iknow.android.features.trim.VideoTrimmerUtil;
 import com.iknow.android.utils.StorageUtil;
-import iknow.android.utils.callback.SingleCallback;
+
 import iknow.android.utils.thread.BackgroundExecutor;
 import iknow.android.utils.thread.UiThreadExecutor;
 
@@ -46,12 +47,12 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
   private int mMaxWidth = VIDEO_FRAMES_WIDTH;
   private Context mContext;
   private RelativeLayout mLinearVideo;
-  private ZVideoView mVideoView;
+  private VideoView mVideoView;
   private ImageView mPlayView;
   private RecyclerView mVideoThumbRecyclerView;
   private RangeSeekBarView mRangeSeekBarView;
   private LinearLayout mSeekBarLayout;
-  private ImageView mRedProgressIcon;
+  private ImageView mRedProgressView;
   private TextView mVideoShootTipTv;
   private float mAverageMsPx;//每毫秒所占的px
   private float averagePxMs;//每px所占用的ms毫秒
@@ -66,8 +67,6 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
   private long scrollPos = 0;
   private int mScaledTouchSlop;
   private int lastScrollX;
-  private boolean isSeeking;
-  private boolean isOverScaledTouchSlop;
   private int mThumbsTotalCount;
   private ValueAnimator mRedProgressAnimator;
   private Handler mAnimationHandler = new Handler();
@@ -85,14 +84,15 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
     this.mContext = context;
     LayoutInflater.from(context).inflate(R.layout.video_trimmer_view, this, true);
 
-    mLinearVideo = findViewById(R.id.layout_surface_view);
-    mVideoView = findViewById(R.id.video_loader);
-    mPlayView = findViewById(R.id.icon_video_play);
-    mSeekBarLayout = findViewById(R.id.seekBarLayout);
-    mRedProgressIcon = findViewById(R.id.positionIcon);
+    mLinearVideo = findViewById(R.id.video_view_layout);
+    mVideoView = findViewById(R.id.video_view);
+    mPlayView = findViewById(R.id.video_play_view);
+    mSeekBarLayout = findViewById(R.id.seek_bar_view);
+    mRedProgressView = findViewById(R.id.position_view);
     mVideoShootTipTv = findViewById(R.id.video_shoot_tip);
     mVideoThumbRecyclerView = findViewById(R.id.video_frames_recyclerView);
     mVideoThumbRecyclerView.setLayoutManager(new LinearLayoutManager(mContext, LinearLayoutManager.HORIZONTAL, false));
+
     mVideoThumbAdapter = new VideoTrimmerAdapter(mContext);
     mVideoThumbRecyclerView.setAdapter(mVideoThumbAdapter);
     mVideoThumbRecyclerView.addOnScrollListener(mOnScrollListener);
@@ -113,6 +113,11 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
       rangeWidth = mMaxWidth / VideoTrimmerUtil.MAX_COUNT_RANGE * mThumbsTotalCount;
       mRightProgressPos = VideoTrimmerUtil.MAX_SHOOT_DURATION;
     }
+
+    while (mVideoThumbRecyclerView.getItemDecorationCount()>0){
+      mVideoThumbRecyclerView.removeItemDecorationAt(0);
+    }
+
     mVideoThumbRecyclerView.addItemDecoration(new SpacesItemDecoration2(VideoTrimmerUtil.RECYCLER_VIEW_PADDING, mThumbsTotalCount));
 
     Log.e(TAG, "left: "+mLeftProgressPos+" right: "+mRightProgressPos+" duration: "+mDuration);
@@ -174,13 +179,15 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
     }
     mVideoView.setLayoutParams(lp);
     mDuration = mVideoView.getDuration();
+
     if (!getRestoreState()) {
       seekTo((int) mRedProgressBarPos);
     } else {
       setRestoreState(false);
       seekTo((int) mRedProgressBarPos);
     }
-    Log.e(TAG, "duration: "+mDuration);
+
+    Log.e(TAG, "duration: "+mDuration+" "+mThumbsTotalCount);
     initRangeSeekBarView();
     startShootVideoThumbs(mContext, mSourceUri, mThumbsTotalCount, 0, mDuration);
   }
@@ -209,10 +216,10 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
 
   public void onVideoPause() {
     if (mVideoView.isPlaying()) {
-      seekTo(mLeftProgressPos);//复位
+      seekTo(mLeftProgressPos);
       mVideoView.pause();
       setPlayPauseViewIcon(false);
-      mRedProgressIcon.setVisibility(GONE);
+      mRedProgressView.setVisibility(GONE);
     }
   }
 
@@ -275,25 +282,22 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
   }
 
   private final RangeSeekBarView.OnRangeSeekBarChangeListener mOnRangeSeekBarChangeListener = new RangeSeekBarView.OnRangeSeekBarChangeListener() {
-    @Override public void onRangeSeekBarValuesChanged(RangeSeekBarView bar, long minValue, long maxValue, int action, boolean isMin,
-        RangeSeekBarView.Thumb pressedThumb) {
+    @Override
+    public void onRangeSeekBarValuesChanged(RangeSeekBarView bar, long minValue, long maxValue, int action, boolean isMin, RangeSeekBarView.Thumb pressedThumb) {
       Log.d(TAG, "-----minValue----->>>>>>" + minValue);
       Log.d(TAG, "-----maxValue----->>>>>>" + maxValue);
+
       mLeftProgressPos = minValue + scrollPos;
       mRedProgressBarPos = mLeftProgressPos;
       mRightProgressPos = maxValue + scrollPos;
+
       Log.d(TAG, "-----mLeftProgressPos----->>>>>>" + mLeftProgressPos);
       Log.d(TAG, "-----mRightProgressPos----->>>>>>" + mRightProgressPos);
       switch (action) {
-        case MotionEvent.ACTION_DOWN:
-          isSeeking = false;
-          break;
         case MotionEvent.ACTION_MOVE:
-          isSeeking = true;
           seekTo((int) (pressedThumb == RangeSeekBarView.Thumb.MIN ? mLeftProgressPos : mRightProgressPos));
           break;
         case MotionEvent.ACTION_UP:
-          isSeeking = false;
           seekTo((int) mLeftProgressPos);
           break;
         default:
@@ -305,26 +309,27 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
   };
 
   private final RecyclerView.OnScrollListener mOnScrollListener = new RecyclerView.OnScrollListener() {
-    @Override public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+    @Override
+    public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
       super.onScrollStateChanged(recyclerView, newState);
       Log.d(TAG, "newState = " + newState);
     }
 
-    @Override public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+    @Override
+    public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
       super.onScrolled(recyclerView, dx, dy);
-      isSeeking = false;
       int scrollX = calcScrollXDistance();
       //达不到滑动的距离
+      boolean isOverScaledTouchSlop;
       if (Math.abs(lastScrollX - scrollX) < mScaledTouchSlop) {
         isOverScaledTouchSlop = false;
         return;
       }
-      isOverScaledTouchSlop = true;
+
       //初始状态,why ? 因为默认的时候有35dp的空白！
       if (scrollX == -VideoTrimmerUtil.RECYCLER_VIEW_PADDING) {
         scrollPos = 0;
       } else {
-        isSeeking = true;
         scrollPos = (long) (mAverageMsPx * (VideoTrimmerUtil.RECYCLER_VIEW_PADDING + scrollX));
         mLeftProgressPos = mRangeSeekBarView.getSelectedMinValue() + scrollPos;
         mRightProgressPos = mRangeSeekBarView.getSelectedMaxValue() + scrollPos;
@@ -334,7 +339,7 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
           mVideoView.pause();
           setPlayPauseViewIcon(false);
         }
-        mRedProgressIcon.setVisibility(GONE);
+        mRedProgressView.setVisibility(GONE);
         seekTo(mLeftProgressPos);
         mRangeSeekBarView.setStartEndTime(mLeftProgressPos, mRightProgressPos);
         mRangeSeekBarView.invalidate();
@@ -365,38 +370,30 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
   }
 
   private void playingAnimation() {
-    if (mRedProgressIcon.getVisibility() == View.GONE) {
-      mRedProgressIcon.setVisibility(View.VISIBLE);
+    if (mRedProgressView.getVisibility() == View.GONE) {
+      mRedProgressView.setVisibility(View.VISIBLE);
     }
-    final FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) mRedProgressIcon.getLayoutParams();
+    final FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) mRedProgressView.getLayoutParams();
     int start = (int) (VideoTrimmerUtil.RECYCLER_VIEW_PADDING + (mRedProgressBarPos - scrollPos) * averagePxMs);
     int end = (int) (VideoTrimmerUtil.RECYCLER_VIEW_PADDING + (mRightProgressPos - scrollPos) * averagePxMs);
     mRedProgressAnimator = ValueAnimator.ofInt(start, end).setDuration((mRightProgressPos - scrollPos) - (mRedProgressBarPos - scrollPos));
     mRedProgressAnimator.setInterpolator(new LinearInterpolator());
-    mRedProgressAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-      @Override public void onAnimationUpdate(ValueAnimator animation) {
-        params.leftMargin = (int) animation.getAnimatedValue();
-        mRedProgressIcon.setLayoutParams(params);
-        Log.d(TAG, "----onAnimationUpdate--->>>>>>>" + mRedProgressBarPos);
-      }
+    mRedProgressAnimator.addUpdateListener(animation -> {
+      params.leftMargin = (int) animation.getAnimatedValue();
+      mRedProgressView.setLayoutParams(params);
     });
     mRedProgressAnimator.start();
   }
 
   private void pauseRedProgressAnimation() {
-    mRedProgressIcon.clearAnimation();
+    mRedProgressView.clearAnimation();
     if (mRedProgressAnimator != null && mRedProgressAnimator.isRunning()) {
       mAnimationHandler.removeCallbacks(mAnimationRunnable);
       mRedProgressAnimator.cancel();
     }
   }
 
-  private Runnable mAnimationRunnable = new Runnable() {
-
-    @Override public void run() {
-      updateVideoProgress();
-    }
-  };
+  private Runnable mAnimationRunnable = () -> updateVideoProgress();
 
   private void updateVideoProgress() {
     long currentPosition = mVideoView.getCurrentPosition();
@@ -413,7 +410,8 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
   /**
    * Cancel trim thread execut action when finish
    */
-  @Override public void onDestroy() {
+  @Override
+  public void onDestroy() {
     BackgroundExecutor.cancelAll("", true);
     UiThreadExecutor.cancelAll("");
   }

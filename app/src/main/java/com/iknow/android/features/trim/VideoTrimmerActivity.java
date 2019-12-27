@@ -58,14 +58,18 @@ public class VideoTrimmerActivity extends BaseActivity implements VideoTrimListe
       mBinding.trimmerView.setOnTrimVideoListener(this);
       mBinding.trimmerView.initVideoByURI(Uri.parse(path));
     }
+    Log.e(TAG, path);
 
 
     List<String> urls = new ArrayList<>();
-    urls.add("/storage/emulated/0/DCIM/Camera/VID_20191128_130952.mp4");
-    urls.add("/storage/emulated/0/Movies/watermark_video1.mp4");
-    urls.add("/storage/emulated/0/Movies/cut_video.mp4");
+    urls.add("/storage/emulated/0/DCIM/Pivo/20191226_15443110.mp4");
+    urls.add("/storage/emulated/0/DCIM/Pivo/20191226_15443112.mp4");
+    urls.add("/storage/emulated/0/20191108_160118.mp4");
+    urls.add("/storage/43E2-AFDA/DCIM/Camera/20191121_091255.mp4");
+
+    Log.e(TAG, "filePath: "+path);
+
     findViewById(R.id.btn_play).setOnClickListener(view -> {
-      Toast.makeText(this, "clicked", Toast.LENGTH_LONG).show();
       Log.e(TAG, "path: "+path);
       if (count == 0){
         count++;

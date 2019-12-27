@@ -25,13 +25,15 @@ import java.text.DecimalFormat;
 public class RangeSeekBarView extends View {
   private static final String TAG = RangeSeekBarView.class.getSimpleName();
   public static final int INVALID_POINTER_ID = 255;
-  public static final int ACTION_POINTER_INDEX_MASK = 0x0000ff00, ACTION_POINTER_INDEX_SHIFT = 8;
+  public static final int ACTION_POINTER_INDEX_MASK = 0x0000ff00;
+  public static final int ACTION_POINTER_INDEX_SHIFT = 8;
   private static final int TextPositionY = UnitConverter.dpToPx(7);
   private static final int paddingTop = UnitConverter.dpToPx(10);
   private int mActivePointerId = INVALID_POINTER_ID;
 
   private long mMinShootTime = VideoTrimmerUtil.MIN_SHOOT_DURATION;
-  private double absoluteMinValuePrim, absoluteMaxValuePrim;
+  private double absoluteMinValuePrim;
+  private double absoluteMaxValuePrim;
   private double normalizedMinValue = 0d;//点坐标占总长度的比例值，范围从0-1
   private double normalizedMaxValue = 1d;//点坐标占总长度的比例值，范围从0-1
   private double normalizedMinValueTime = 0d;
@@ -50,7 +52,6 @@ public class RangeSeekBarView extends View {
   private final float padding = 0;
   private long mStartPosition = 0;
   private long mEndPosition = 0;
-  private float thumbPaddingTop = 0;
   private boolean isTouchDown;
   private float mDownMotionX;
   private boolean mIsDragging;
@@ -96,8 +97,10 @@ public class RangeSeekBarView extends View {
     int newHeight = UnitConverter.dpToPx(55);
     float scaleWidth = newWidth * 1.0f / width;
     float scaleHeight = newHeight * 1.0f / height;
+
     Matrix matrix = new Matrix();
     matrix.postScale(scaleWidth, scaleHeight);
+
     thumbImageLeft = Bitmap.createBitmap(thumbImageLeft, 0, 0, width, height, matrix, true);
     thumbImageRight = thumbImageLeft;
     thumbPressedImage = thumbImageLeft;
@@ -127,7 +130,8 @@ public class RangeSeekBarView extends View {
     mVideoTrimTimePaintR.setTextAlign(Paint.Align.RIGHT);
   }
 
-  @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+  @Override
+  protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
     int width = 300;
     if (MeasureSpec.UNSPECIFIED != MeasureSpec.getMode(widthMeasureSpec)) {
       width = MeasureSpec.getSize(widthMeasureSpec);
@@ -145,18 +149,23 @@ public class RangeSeekBarView extends View {
     super.onDraw(canvas);
     float bg_middle_left = 0;
     float bg_middle_right = getWidth() - getPaddingRight();
+
     float rangeL = normalizedToScreen(normalizedMinValue);
     float rangeR = normalizedToScreen(normalizedMaxValue);
+
     Rect leftRect = new Rect((int) bg_middle_left, getHeight(), (int) rangeL, 0);
     Rect rightRect = new Rect((int) rangeR, getHeight(), (int) bg_middle_right, 0);
+
     canvas.drawRect(leftRect, mShadow);
     canvas.drawRect(rightRect, mShadow);
 
+    float thumbPaddingTop = 0;
     canvas.drawRect(rangeL, thumbPaddingTop + paddingTop, rangeR, thumbPaddingTop + UnitConverter.dpToPx(2) + paddingTop, rectPaint);
     canvas.drawRect(rangeL, getHeight() - UnitConverter.dpToPx(2), rangeR, getHeight(), rectPaint);
 
     drawThumb(normalizedToScreen(normalizedMinValue), false, canvas, true);
     drawThumb(normalizedToScreen(normalizedMaxValue), false, canvas, false);
+
     drawVideoTrimTimeText(canvas);
   }
 
@@ -172,7 +181,8 @@ public class RangeSeekBarView extends View {
     canvas.drawText(rightThumbsTime, normalizedToScreen(normalizedMaxValue), TextPositionY, mVideoTrimTimePaintR);
   }
 
-  @Override public boolean onTouchEvent(MotionEvent event) {
+  @Override
+  public boolean onTouchEvent(MotionEvent event) {
     if (isTouchDown) {
       return super.onTouchEvent(event);
     }
@@ -505,7 +515,8 @@ public class RangeSeekBarView extends View {
     isTouchDown = touchDown;
   }
 
-  @Override protected Parcelable onSaveInstanceState() {
+  @Override
+  protected Parcelable onSaveInstanceState() {
     final Bundle bundle = new Bundle();
     bundle.putParcelable("SUPER", super.onSaveInstanceState());
     bundle.putDouble("MIN", normalizedMinValue);
@@ -515,7 +526,8 @@ public class RangeSeekBarView extends View {
     return bundle;
   }
 
-  @Override protected void onRestoreInstanceState(Parcelable parcel) {
+  @Override
+  protected void onRestoreInstanceState(Parcelable parcel) {
     final Bundle bundle = (Bundle) parcel;
     super.onRestoreInstanceState(bundle.getParcelable("SUPER"));
     normalizedMinValue = bundle.getDouble("MIN");

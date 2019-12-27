@@ -6,16 +6,16 @@
     android:layout_height="match_parent">
 
   <RelativeLayout
-      android:id="@+id/layout_surface_view"
+      android:id="@+id/video_view_layout"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
-      android:layout_above="@+id/layout"
+      android:layout_above="@+id/controller_layout"
       android:background="@android:color/black"
       android:gravity="center"
       >
 
-    <com.iknow.android.widget.ZVideoView
-        android:id="@+id/video_loader"
+    <VideoView
+        android:id="@+id/video_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_centerInParent="true"
@@ -23,7 +23,6 @@
 
     <Button
         android:id="@+id/btn_play"
-        android:src="@drawable/ic_video_play_black"
         android:text="Start again"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
@@ -32,7 +31,7 @@
 
     <ImageView
         android:layout_centerInParent="true"
-        android:id="@+id/icon_video_play"
+        android:id="@+id/video_play_view"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_gravity="center"
@@ -43,12 +42,11 @@
   </RelativeLayout>
 
   <RelativeLayout
-      android:id="@+id/layout"
+      android:id="@+id/controller_layout"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:layout_alignParentBottom="true"
-      android:background="@android:color/black"
-      >
+      android:background="@android:color/black">
 
     <TextView
         android:id="@+id/video_shoot_tip"
@@ -59,9 +57,8 @@
         android:layout_alignParentTop="true"
         android:gravity="center"
         android:textColor="@android:color/white"
-        android:textSize="12dp"
-        tools:text="拖动选择你要发表的10秒以内片段"
-        />
+        android:textSize="12dp" />
+
     <FrameLayout
         android:id="@+id/video_frames_layout"
         android:layout_width="match_parent"
@@ -69,6 +66,7 @@
         android:layout_below="@+id/video_shoot_tip"
         >
 
+      <!-- this recycler view is used to render video frames-->
       <android.support.v7.widget.RecyclerView
           android:id="@+id/video_frames_recyclerView"
           android:layout_width="match_parent"
@@ -77,8 +75,9 @@
           tools:background="@android:color/holo_green_light"
           />
 
+      <!-- This view is used to indicate current position of frame-->
       <ImageView
-          android:id="@+id/positionIcon"
+          android:id="@+id/position_view"
           android:layout_width="wrap_content"
           android:layout_height="50dp"
           android:layout_gravity="bottom"
@@ -86,38 +85,35 @@
           android:contentDescription="@null"
           android:src="@drawable/icon_seek_bar" />
 
+      <!-- This view holds video seekbar and right, left padding -->
       <LinearLayout
           android:layout_width="match_parent"
           android:layout_height="wrap_content"
           android:layout_gravity="bottom"
-          android:orientation="horizontal"
-          >
-
-        <View
-            android:layout_width="35dp"
-            android:layout_height="50dp"
-            android:layout_gravity="bottom"
-            android:background="@color/shadow_color"
-            />
-
-        <LinearLayout
-            android:id="@+id/seekBarLayout"
-            android:layout_width="0dp"
-            android:layout_height="60dp"
-            android:layout_gravity="bottom"
-            android:layout_weight="1"
-            android:gravity="bottom"
-            android:orientation="vertical"
-            />
+          android:orientation="horizontal">
 
         <View
             android:layout_width="35dp"
             android:layout_height="match_parent"
             android:layout_gravity="bottom"
-            android:background="@color/shadow_color"
-            />
-      </LinearLayout>
-    </FrameLayout>
+            android:background="@color/shadow_color" />
 
+        <!-- This view is used to show seek bar for video cutter-->
+        <LinearLayout
+            android:id="@+id/seek_bar_view"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_gravity="bottom"
+            android:layout_weight="1"
+            android:gravity="bottom"
+            android:orientation="vertical" />
+
+        <View
+            android:layout_width="35dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="bottom"
+            android:background="@color/shadow_color" />
+      </LinearLayout>
+  </FrameLayout>
   </RelativeLayout>
 </RelativeLayout>
